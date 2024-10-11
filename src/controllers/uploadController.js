@@ -4,6 +4,11 @@ import Request from '../models/requestModel.js';
 import Product from '../models/productModel.js';
 import Queue from 'bull';
 import { processImages } from '../services/imageProcessingService.js';
+import axios from 'axios';
+import path from 'path'
+import { fileURLToPath } from 'url'; 
+import { dirname } from 'path';
+import sharp from 'sharp';
 
 // Setup for file uploads
 const upload = multer({ dest: 'uploads/' });
@@ -38,4 +43,26 @@ export const uploadCSV = async (req, res) => {
   res.status(202).json({ requestId });
 };
 
+export const compress_image = async (req, res) => {
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const outputFileName = `compressed_${Date.now()}.jpg`;
+    const outputPath = path.join(__dirname, 'compressed_images', outputFileName);
+    const url = req.body.image_url;
+    const response = await axios({
+      url: url,
+      responseType: 'arraybuffer', // Important for image processing
+    });
+    console.log(outputPath)
+    await sharp(response.data)
+      .resize(800) // Resize the image to a width of 800px (optional)
+      .jpeg({ quality: 50 }) // Compress to 50% quality for JPEG
+      .toFile(outputPath);
+    res.status(200).send("ok image processed successfully")
+  } catch (error) {
+    console.log("error for image compressing", error)
+    res.status(400).send("error compressing image")
+  }
+}
 export { upload };
